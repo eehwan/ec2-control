@@ -18,7 +18,8 @@ ec2-duckdns-control/
 │   ├── stop_instance.sh
 │   ├── update_dns.sh
 │   └── wait_and_shutdown.sh
-├── start_and_shutdown.sh
+├── open.sh
+├── close.sh
 ├── shutdown.log          ← nohup 로그
 ├── README.md
 └── .gitignore
@@ -28,7 +29,8 @@ ec2-duckdns-control/
 
 | 파일명 | 역할 |
 |--------|------|
-| `start_and_shutdown.sh` | `.env`를 로드하고 전체 자동화 흐름을 실행 (시작 → DNS 등록 → 자동 종료 예약) |
+| `open.sh` | `.env`를 로드하고 전체 자동화 흐름을 실행 (시작 → DNS 등록 → 자동 종료 예약) |
+| `close.sh` | `.env`를 로드하고 인스턴스 종료 |
 | `scripts/start_instance.sh` | EC2 인스턴스를 시작하고 시작 요청 완료 메시지를 출력 |
 | `scripts/update_dns.sh` | EC2 인스턴스의 퍼블릭 IP를 DuckDNS에 매핑 |
 | `scripts/wait_and_shutdown.sh` | 설정된 시간 후 EC2 인스턴스를 자동 종료 |
@@ -94,16 +96,15 @@ chmod +x scripts/*.sh
 ### 4. 스크립트 실행 예시
 
 ```bash
-# 1시간 후 종료 (기본값)
-./start_and_shutdown.sh --env dev.env
+# 2시간 후 종료 (기본값)
+./open.sh --env dev.env
 
 # 30분 후 종료
-./start_and_shutdown.sh --env dev.env --wait 1800
+./open.sh --env dev.env --wait 1800
 ```
 
-### 5. 수동으로 종료하고 싶을 경우
+### 5. 종료하고 싶을 경우
 
 ```bash
-source envs/dev.env
-./scripts/stop_instance.sh
+close.sh --env dev.env
 ```
