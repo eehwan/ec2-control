@@ -1,10 +1,18 @@
-# 환경 변수 파일 (토큰, 인스턴스 ID 등 포함)
-.env
+# .env 파일
+envs/*.env
+!envs/.env.example  # 템플릿은 포함
+
+# nohup 로그 파일
+shutdown.log
+
+# 중복 실행 방지용 Lockfile (INSTANCE_ID 별로 생성됨)
+ec2_shutdown_lock_*.pid
+/tmp/ec2_shutdown_lock_*.pid
 
 # macOS
 .DS_Store
 
-# 편집기 임시파일
+# 편집기 임시 파일
 *.swp
 *.swo
 *.bak
