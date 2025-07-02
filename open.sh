@@ -33,8 +33,7 @@ set +o allexport
 echo "[INFO] 퍼블릭 IP 할당 대기 중 (10초)..."
 sleep 10
 
-# ─────────────── DuckDNS에 퍼블릭 IP 등록 ───────────────
-"$BASE_DIR/scripts/update_dns.sh"
+
 
 # ─────────────── 종료 타이머 실행 (백그라운드) ───────────────
 nohup "$BASE_DIR/scripts/wait_and_shutdown.sh" "$WAIT_SECONDS" > shutdown.log 2>&1 &

@@ -1,14 +1,13 @@
-# EC2 & DuckDNS Control Scripts
+# EC2 Control Scripts
 
-AWS EC2 인스턴스를 시작하고 일정 시간 후 자동으로 종료하며,  
-현재 퍼블릭 IP를 DuckDNS에 자동 등록하는 셸 스크립트 기반 자동화 도구입니다.
+AWS EC2 인스턴스를 시작하고 일정 시간 후 자동으로 종료하는 셸 스크립트 기반 자동화 도구입니다.
 
 ---
 
 ## 디렉토리 구조
 
 ```
-ec2-duckdns-control/
+ec2-instance-control/
 ├── envs/
 │   ├── dev.env
 │   ├── prod.env
@@ -16,10 +15,10 @@ ec2-duckdns-control/
 ├── scripts/
 │   ├── start_instance.sh
 │   ├── stop_instance.sh
-│   ├── update_dns.sh
 │   └── wait_and_shutdown.sh
 ├── open.sh
 ├── close.sh
+├── connect.sh
 ├── shutdown.log          ← nohup 로그
 ├── README.md
 └── .gitignore
@@ -29,10 +28,10 @@ ec2-duckdns-control/
 
 | 파일명 | 역할 |
 |--------|------|
-| `open.sh` | `.env`를 로드하고 전체 자동화 흐름을 실행 (시작 → DNS 등록 → 자동 종료 예약) |
+| `open.sh` | `.env`를 로드하고 전체 자동화 흐름을 실행 (시작 → 자동 종료 예약) |
 | `close.sh` | `.env`를 로드하고 인스턴스 종료 |
+| `connect.sh` | `.env`를 로드하고 EC2 인스턴스를 시작한 후 SSH로 접속 |
 | `scripts/start_instance.sh` | EC2 인스턴스를 시작하고 시작 요청 완료 메시지를 출력 |
-| `scripts/update_dns.sh` | EC2 인스턴스의 퍼블릭 IP를 DuckDNS에 매핑 |
 | `scripts/wait_and_shutdown.sh` | 설정된 시간 후 EC2 인스턴스를 자동 종료 |
 | `scripts/stop_instance.sh` | EC2 인스턴스를 수동으로 즉시 종료 |
 
@@ -67,29 +66,20 @@ aws configure
 > ⚠️ 해당 키는 EC2 인스턴스에 대해 start, stop, describe-instances 권한을 반드시 가져야 합니다.
 권한이 부족하면 스크립트가 실패합니다.
 
-### 2. DuckDNS 계정 생성 및 .env 설정
+### 2. .env 파일 설정
 
-> 💡 이 스크립트를 사용하려면 DuckDNS 계정을 생성하고, 서브도메인과 토큰을 발급받아야 합니다.
-
-1. https://www.duckdns.org에 접속하여 GitHub/Google 등으로 로그인
-
-2. 원하는 서브도메인 등록 (예: myproject.duckdns.org)
-
-3. 상단에 표시되는 토큰 복사
-
-#### .env 파일 예시 (envs/dev.env):
+`.env` 파일에는 EC2 인스턴스 ID, SSH 키 경로, SSH 사용자 이름이 포함되어야 합니다.
 
 ```env
 INSTANCE_ID=i-xxxxxxxxxxxxxxxxx     # EC2 인스턴스 ID
-DUCKDNS_DOMAIN=your-subdomain       # DuckDNS 서브도메인 (예: myproject)
-DUCKDNS_TOKEN=your-duckdns-token    # DuckDNS API 토큰
+SSH_KEY_PATH="/path/to/your-key.pem"  # SSH 키 파일의 절대 경로
+SSH_USER=ubuntu                         # EC2 인스턴스 사용자 이름 (예: ubuntu, ec2-user)
 ```
 
 ### 3. 실행 권한 부여
 
 ```bash
-chmod +x start_and_shutdown.sh
-chmod +x scripts/*.sh
+chmod +x open.sh close.sh connect.sh scripts/*.sh
 ```
 
 ### 4. 스크립트 실행 예시
@@ -100,6 +90,9 @@ chmod +x scripts/*.sh
 
 # 30분 후 종료
 ./open.sh --env dev.env --wait 1800
+
+# EC2 인스턴스 시작 후 SSH 접속
+./connect.sh --env dev.env
 ```
 
 ### 5. 종료하고 싶을 경우
