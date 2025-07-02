@@ -1,6 +1,6 @@
-# EC2 Control Scripts
+# EC2 Instance Control Scripts
 
-AWS EC2 인스턴스를 시작하고 일정 시간 후 자동으로 종료하는 셸 스크립트 기반 자동화 도구입니다.
+AWS EC2 인스턴스를 시작하고 종료하며, SSH 접속을 자동화하는 셸 스크립트 기반 도구입니다.
 
 ---
 
@@ -19,6 +19,7 @@ ec2-instance-control/
 ├── open.sh
 ├── close.sh
 ├── connect.sh
+├── install.sh            ← 새로운 설치 스크립트
 ├── shutdown.log          ← nohup 로그
 ├── README.md
 └── .gitignore
@@ -28,6 +29,7 @@ ec2-instance-control/
 
 | 파일명 | 역할 |
 |--------|------|
+| `install.sh` | `ec2ctl` 셸 함수를 설치하여 스크립트 실행을 간소화 |
 | `open.sh` | `.env`를 로드하고 전체 자동화 흐름을 실행 (시작 → 자동 종료 예약) |
 | `close.sh` | `.env`를 로드하고 인스턴스 종료 |
 | `connect.sh` | `.env`를 로드하고 EC2 인스턴스를 시작한 후 SSH로 접속 |
@@ -37,7 +39,7 @@ ec2-instance-control/
 
 ---
 
-## ⚙️ 사용 방법
+## ⚙️ 필수 설정
 
 ### 1. AWS CLI 설치 및 설정
 
@@ -68,7 +70,7 @@ aws configure
 
 ### 2. .env 파일 설정
 
-`.env` 파일에는 EC2 인스턴스 ID, SSH 키 경로, SSH 사용자 이름이 포함되어야 합니다.
+`.env` 파일에는 EC2 인스턴스 ID, SSH 키 경로, SSH 사용자 이름이 포함되어야 합니다. `envs/` 디렉토리에 `dev.env`, `prod.env` 등 환경별 파일을 생성하여 관리할 수 있습니다.
 
 ```env
 INSTANCE_ID=i-xxxxxxxxxxxxxxxxx     # EC2 인스턴스 ID
@@ -76,27 +78,55 @@ SSH_KEY_PATH="/path/to/your-key.pem"  # SSH 키 파일의 절대 경로
 SSH_USER=ubuntu                         # EC2 인스턴스 사용자 이름 (예: ubuntu, ec2-user)
 ```
 
-### 3. 실행 권한 부여
+---
+
+## 🚀 빠른 시작
+
+`install.sh` 스크립트를 실행하여 `ec2ctl` 셸 함수를 설치하세요. 이 함수를 통해 EC2 제어 스크립트를 더 쉽게 실행할 수 있습니다.
 
 ```bash
-chmod +x open.sh close.sh connect.sh scripts/*.sh
+git clone https://github.com/eehwan/ec2-instance-control
+cd ec2-instance-control
+chmod +x install.sh # 실행 권한 부여
+./install.sh        # 설치 스크립트 실행
 ```
 
-### 4. 스크립트 실행 예시
+**주의:** `install.sh` 스크립트는 `.zshrc` 또는 `.bashrc`와 같은 셸 설정 파일을 수정합니다. 스크립트 실행 전에 내용을 확인하시고, 실행 중 동의 여부를 묻는 프롬프트에 'y'를 입력해야 합니다.
+
+### 스크립트 실행 예시 (`ec2ctl` 함수 사용)
+
+`install.sh`를 통해 `ec2ctl` 함수를 설치한 후, 터미널에서 다음 명령어를 사용하여 스크립트를 실행할 수 있습니다.
 
 ```bash
-# 2시간 후 종료 (기본값)
-./open.sh --env dev.env
+# 기본 .env 파일을 사용하여 EC2 인스턴스 시작 및 2시간 후 자동 종료 예약
+ec2ctl open
 
-# 30분 후 종료
-./open.sh --env dev.env --wait 1800
+# 'dev.env' 파일을 사용하여 EC2 인스턴스 시작 및 30분(1800초) 후 자동 종료 예약
+ec2ctl open dev --wait 1800
 
-# EC2 인스턴스 시작 후 SSH 접속
-./connect.sh --env dev.env
+# 'dev.env' 파일을 사용하여 EC2 인스턴스 즉시 종료
+ec2ctl close dev
+
+# 'prod.env' 파일을 사용하여 EC2 인스턴스 시작 후 SSH 접속
+ec2ctl connect prod
 ```
 
-### 5. 종료하고 싶을 경우
+**`ec2ctl` 함수 사용법:**
 
 ```bash
-close.sh --env dev.env
+ec2ctl <스크립트_이름> [환경_이름] [스크립트_추가_인자...]
+```
+
+*   `<스크립트_이름>`: `open`, `close`, `connect` 중 하나.
+*   `[환경_이름]`: 사용할 `.env` 파일의 이름 (예: `dev`, `prod`). 지정하지 않으면 `envs/.env` 파일을 사용합니다.
+*   `[스크립트_추가_인자...]`: `open.sh`의 `--wait`와 같이 각 스크립트가 받는 추가 인자들.
+
+---
+
+## 🗑️ 정리 (인스턴스 종료)
+
+EC2 인스턴스를 수동으로 즉시 종료하려면 `ec2ctl close` 명령을 사용하세요.
+
+```bash
+ec2ctl close dev
 ```
