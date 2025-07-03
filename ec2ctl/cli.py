@@ -1,5 +1,7 @@
 import click
 import sys
+import subprocess
+import os
 from click.exceptions import Exit
 from . import config
 from . import ec2
@@ -31,6 +33,33 @@ def _get_aws_params(profile, region):
     resolved_profile = profile if profile else default_profile
     resolved_region = region if region else default_region
     return resolved_profile, resolved_region
+
+def _get_instance_details(name, cfg):
+    configured_instances = cfg.get('instances', {})
+    item = configured_instances.get(name)
+
+    if item is None:
+        raise ConfigError(f"Instance or group '{name}' not found in config.")
+
+    instance_id = None
+    ssh_user = None
+    ssh_key_path = None
+
+    if isinstance(item, dict):
+        instance_id = item.get('id')
+        ssh_user = item.get('ssh_user')
+        ssh_key_path = item.get('ssh_key_path')
+    elif isinstance(item, str):
+        instance_id = item
+    elif isinstance(item, (list, tuple)):
+        raise ConfigError(f"'{name}' is a group. The 'connect' command only supports single instances.")
+    else:
+        raise ConfigError(f"Invalid instance definition for '{name}': {item}")
+
+    if not instance_id:
+        raise ConfigError(f"Instance ID not found for '{name}' in config.")
+
+    return instance_id, ssh_user, ssh_key_path
 
 @cli.command()
 @click.argument('name')
@@ -170,7 +199,6 @@ def list(profile, region, dry_run, verbose): # No 'yes' for list
                 continue
             if type(ids) is list:
                 click.echo(f"  {name} (Group):")
-                click.echo("")
                 for instance_id in ids:
                     click.echo(f"    - {instance_id}")
             else:
@@ -188,6 +216,88 @@ def init(yes):
     if config.os.path.exists(config.CONFIG_PATH):
         if not yes and not click.confirm(f"{config.CONFIG_PATH} already exists. Overwrite?"):
             click.echo("Aborted.")
-            return
+            sys.exit(0)
     config.create_default_config()
     click.echo(f"Created default config file at {config.CONFIG_PATH}")
+    sys.exit(0)
+
+@cli.command()
+@click.argument('name')
+@click.option('--user', help='SSH user name. Overrides config.')
+@click.option('--key', help='Path to SSH private key file. Overrides config.')
+@click.option('--keep-running', is_flag=True, help='Keep instance running after SSH disconnect.')
+@common_options
+def connect(name, user, key, keep_running, profile, region, dry_run, verbose):
+    """Connects to an EC2 instance via SSH, starting it if necessary."""
+    try:
+        resolved_profile, resolved_region = _get_aws_params(profile, region)
+        cfg = config.get_config()
+        instance_id, ssh_user_cfg, ssh_key_path_cfg = _get_instance_details(name, cfg)
+
+        # Determine SSH user and key path
+        final_ssh_user = user if user else ssh_user_cfg
+        final_ssh_key_path = key if key else ssh_key_path_cfg
+
+        if not final_ssh_user:
+            raise ConfigError("SSH user not specified in config or via --user option.")
+        if not final_ssh_key_path:
+            raise ConfigError("SSH key path not specified in config or via --key option.")
+
+        if dry_run:
+            click.echo(f"Dry run: Would connect to {instance_id} as {final_ssh_user} with key {final_ssh_key_path} (profile: {resolved_profile}, region: {resolved_region}).")
+            if not keep_running:
+                click.echo(f"Dry run: Would stop {instance_id} on disconnect.")
+            return
+
+        # Start instance (idempotent)
+        if verbose:
+            click.echo(f"Ensuring {instance_id} is running (profile: {resolved_profile}, region: {resolved_region})...")
+        else:
+            click.echo(f"Ensuring {instance_id} is running...")
+        ec2.start_instance(instance_id, resolved_profile, resolved_region)
+        click.echo(f"Instance {instance_id} is running.")
+
+        # Get public IP
+        if verbose:
+            click.echo(f"Getting public IP for {instance_id}...")
+        public_ip = ec2.get_instance_public_ip(instance_id, resolved_profile, resolved_region)
+        if not public_ip:
+            raise AwsError(f"Could not get public IP for {instance_id}. Instance might not have a public IP.")
+        click.echo(f"Connecting to {public_ip}...")
+
+        # Construct SSH command
+        ssh_command = [
+            "ssh",
+            "-i", os.path.expanduser(final_ssh_key_path),
+            f"{final_ssh_user}@{public_ip}"
+        ]
+
+        if verbose:
+            click.echo(f"Executing SSH command: {' '.join(ssh_command)}")
+
+        # Execute SSH command and wait for it to finish
+        try:
+            subprocess.run(ssh_command, check=True)
+        except subprocess.CalledProcessError as e:
+            raise AwsError(f"SSH command failed with exit code {e.returncode}.") from e
+        except FileNotFoundError:
+            raise AwsError("'ssh' command not found. Please ensure OpenSSH client is installed and in your PATH.")
+
+        # Stop instance if --keep-running is not set
+        if not keep_running:
+            if verbose:
+                click.echo(f"SSH session ended. Stopping {instance_id} (profile: {resolved_profile}, region: {resolved_region})...")
+            else:
+                click.echo(f"SSH session ended. Stopping {instance_id}...")
+            ec2.stop_instance(instance_id, resolved_profile, resolved_region)
+            click.echo(f"Successfully stopped {instance_id}.")
+        else:
+            click.echo(f"SSH session ended. Instance {instance_id} kept running as requested.")
+        sys.exit(0)
+
+    except (ConfigError, AwsError) as e:
+        click.echo(f"Error: {e}", err=True)
+        sys.exit(1)
+    except Exception as e:
+        click.echo(f"An unexpected error occurred: {e}", err=True)
+        sys.exit(1)

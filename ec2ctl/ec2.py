@@ -63,18 +63,47 @@ def get_instance_status(instance_id, profile, region):
         else:
             raise AwsError(f"Failed to get status for instance {instance_id}: {e}")
 
+def get_instance_public_ip(instance_id, profile, region):
+    """Gets the public IP address of an EC2 instance."""
+    ec2 = _get_ec2_client(profile, region)
+    try:
+        response = ec2.describe_instances(InstanceIds=[instance_id])
+        if response['Reservations'] and response['Reservations'][0]['Instances']:
+            instance = response['Reservations'][0]['Instances'][0]
+            return instance.get('PublicIpAddress')
+        return None
+    except ClientError as e:
+        error_code = e.response.get('Error', {}).get('Code')
+        if error_code == 'InvalidInstanceID.NotFound':
+            raise AwsError(f"Instance {instance_id} not found.")
+        elif error_code == 'UnauthorizedOperation':
+            raise AwsError(f"Permission denied to get public IP for instance {instance_id}. Check your AWS credentials and IAM policies.")
+        else:
+            raise AwsError(f"Failed to get public IP for instance {instance_id}: {e}")
+
 def get_instance_ids_from_names(names, config_data):
     """Resolves instance names/groups to a list of instance IDs."""
     instance_ids = []
     configured_instances = config_data.get('instances', {})
 
     for name in names:
-        ids = configured_instances.get(name)
-        if ids is None:
+        item = configured_instances.get(name)
+        if item is None:
             raise ConfigError(f"Instance or group '{name}' not found in config.")
         
-        if isinstance(ids, list):
-            instance_ids.extend(ids)
+        if isinstance(item, (list, tuple)):
+            for sub_item in item:
+                if isinstance(sub_item, dict) and 'id' in sub_item:
+                    instance_ids.append(sub_item['id'])
+                elif isinstance(sub_item, str):
+                    instance_ids.append(sub_item)
+                else:
+                    raise ConfigError(f"Invalid instance definition for '{name}': {sub_item}")
+        elif isinstance(item, dict) and 'id' in item:
+            instance_ids.append(item['id'])
+        elif isinstance(item, str):
+            instance_ids.append(item)
         else:
-            instance_ids.append(ids)
+            raise ConfigError(f"Invalid instance definition for '{name}': {item}")
+
     return list(set(instance_ids)) # Return unique IDs

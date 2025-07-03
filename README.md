@@ -16,6 +16,7 @@ A lightweight CLI tool to manage AWS EC2 instances by name or group, designed fo
   - [`ec2ctl start`](#ec2ctl-start)
   - [`ec2ctl stop`](#ec2ctl-stop)
   - [`ec2ctl status`](#ec2ctl-status)
+  - [`ec2ctl connect`](#ec2ctl-connect)
 - [Error Handling & Troubleshooting](#error-handling--troubleshooting)
 - [Contributing](#contributing)
 - [License](#license)
@@ -30,6 +31,7 @@ A lightweight CLI tool to manage AWS EC2 instances by name or group, designed fo
 - **Flexible Configuration:** Manage instances by name or group using a simple `config.yaml` file.
 - **Enhanced User Experience:** Supports `--dry-run`, `--verbose`, and `--yes` options.
 - **Robust Error Handling:** Provides clear messages for AWS authentication, instance state, and configuration issues.
+- **SSH Connection:** Connect directly to instances, with optional automatic stopping on disconnect.
 
 ## Installation
 
@@ -73,18 +75,26 @@ default_profile: default
 default_region: ap-northeast-2
 
 instances:
-  dev-server: i-0abc1234567890
+  dev-server:
+    id: i-0abc1234567890
+    ssh_user: ec2-user
+    ssh_key_path: ~/.ssh/id_rsa
   backend-api:
-    - i-01aaa111aaa
-    - i-01bbb222bbb
-  staging: i-0123staging456
+    - id: i-01aaa111aaa
+      ssh_user: ubuntu
+      ssh_key_path: ~/.ssh/backend_key.pem
+    - id: i-01bbb222bbb
+      ssh_user: ubuntu
+      ssh_key_path: ~/.ssh/backend_key.pem
+  staging: i-0123staging456 # Simple ID definition still supported
 ```
 
 -   `default_profile`: (Optional) Your default AWS profile name. Defaults to `default`.
 -   `default_region`: (Optional) Your default AWS region. Defaults to `ap-northeast-2`.
--   `instances`: A map of instance names or group names to their corresponding EC2 instance IDs.
-    -   Single instance: `dev-server: i-0abc1234567890`
-    -   Instance group: `backend-api: [i-01aaa111aaa, i-01bbb222bbb]`
+-   `instances`: A map of instance names or group names to their corresponding EC2 instance IDs and optional SSH details.
+    -   Single instance with SSH details: `dev-server: { id: ..., ssh_user: ..., ssh_key_path: ... }`
+    -   Instance group with SSH details: `backend-api: [ { id: ..., ssh_user: ..., ssh_key_path: ... }, ... ]`
+    -   Simple ID definition is still supported: `staging: i-0123staging456`
 
 ## Usage
 
@@ -135,6 +145,26 @@ ec2ctl status dev-server
 ec2ctl status all
 ```
 
+### `ec2ctl connect [name] [--user USER] [--key KEY_PATH] [--keep-running]`
+
+Connects to an EC2 instance via SSH, starting it if necessary. By default, the instance will be stopped when the SSH session disconnects.
+
+-   `name`: The name of the instance or group as defined in `config.yaml`.
+-   `--user USER`: Override the SSH user defined in config.
+-   `--key KEY_PATH`: Override the path to the SSH private key file defined in config.
+-   `--keep-running`: Keep the instance running after the SSH session disconnects.
+
+```bash
+# Connect to dev-server, stop on disconnect (default)
+ec2ctl connect dev-server
+
+# Connect to dev-server, keep running on disconnect
+ec2ctl connect dev-server --keep-running
+
+# Connect with overridden user and key
+ec2ctl connect dev-server --user admin --key ~/.ssh/my_custom_key.pem
+```
+
 ## Error Handling & Troubleshooting
 
 `ec2ctl` provides informative error messages for common issues:
@@ -143,6 +173,7 @@ ec2ctl status all
 -   **Instance/Group not found:** Ensure the name is correctly spelled and defined in `config.yaml`.
 -   **AWS Authentication/Authorization issues:** Check your AWS CLI configuration (`aws configure`) and IAM policies (e.g., `ec2:StartInstances`, `ec2:StopInstances`, `ec2:DescribeInstances`).
 -   **Incorrect Instance State:** Attempting to start an already running instance, or stop an already stopped instance.
+-   **SSH Connection Issues:** Ensure the instance has a public IP, security groups allow SSH (port 22), and the SSH key path/permissions are correct.
 
 ## Contributing
 

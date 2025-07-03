@@ -8,3 +8,8 @@ def mock_ec2_functions():
             with patch('ec2ctl.ec2.stop_instance') as mock_stop:
                 with patch('ec2ctl.ec2.get_instance_status') as mock_status:
                     yield mock_get_ids, mock_start, mock_stop, mock_status
+
+@pytest.fixture
+def mock_subprocess_run():
+    with patch('subprocess.run') as mock_run:
+        yield mock_run
