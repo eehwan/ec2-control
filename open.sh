@@ -29,9 +29,7 @@ set +o allexport
 # ─────────────── EC2 인스턴스 시작 ───────────────
 "$BASE_DIR/scripts/start_instance.sh"
 
-# ─────────────── 퍼블릭 IP 할당 대기 (10초) ───────────────
-echo "[INFO] 퍼블릭 IP 할당 대기 중 (10초)..."
-sleep 10
+
 
 
 
