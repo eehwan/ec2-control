@@ -12,7 +12,7 @@ with open("ec2ctl/__init__.py", "r") as f:
 setup(
     name='ec2ctl',
     version=version,
-    packages=find_packages(where='ec2ctl'),
+    packages=['ec2ctl'],
     include_package_data=True,
     install_requires=[
         'click',
