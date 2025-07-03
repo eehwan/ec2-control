@@ -41,19 +41,22 @@ A lightweight CLI tool to manage AWS EC2 instances by name or group, designed fo
 
 ### Install `ec2ctl`
 
-1.  **Clone the repository:**
+You can install `ec2ctl` directly from PyPI using pip:
 
-    ```bash
-    git clone https://github.com/eehwan/ec2-control.git
-    cd ec2-control
-    ```
+```bash
+pip install ec2ctl
+```
 
-2.  **Install in editable mode (for development):**
+#### For Development
 
-    ```bash
-    pip install -e .
-    ```
-    This allows changes to the source code to be immediately reflected without reinstallation.
+If you plan to contribute or modify the source code, you can install it in editable mode:
+
+```bash
+git clone https://github.com/eehwan/ec2-control.git
+cd ec2-control
+pip install -e .
+```
+This allows changes to the source code to be immediately reflected without reinstallation.
 
 ## Configuration
 
