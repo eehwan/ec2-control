@@ -11,6 +11,7 @@ __pycache__/
 *.pyc
 *.pyo
 *.pyd
+.pytest_cache/
 
 # 패키지 빌드 및 메타데이터
 ec2ctl.egg-info/
