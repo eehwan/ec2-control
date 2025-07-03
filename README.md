@@ -44,8 +44,8 @@ A lightweight CLI tool to manage AWS EC2 instances by name or group, designed fo
 1.  **Clone the repository:**
 
     ```bash
-    git clone https://github.com/YOUR_USERNAME/ec2-instance-control.git # Replace with your actual repo URL
-    cd ec2-instance-control
+    git clone https://github.com/eehwan/ec2-control.git
+    cd ec2-control
     ```
 
 2.  **Install in editable mode (for development):**
