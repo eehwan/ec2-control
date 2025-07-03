@@ -1,132 +1,150 @@
-# EC2 Instance Control Scripts
+# ec2ctl: Effortless EC2 Instance Control
 
-AWS EC2 인스턴스를 시작하고 종료하며, SSH 접속을 자동화하는 셸 스크립트 기반 도구입니다.
+![Python Version](https://img.shields.io/badge/python-3.7+-blue.svg) ![PyPI Version](https://img.shields.io/pypi/v/ec2ctl.svg) ![License](https://img.shields.io/badge/license-MIT-green.svg)
 
----
+A lightweight CLI tool to manage AWS EC2 instances by name or group, designed for developers and DevOps who need a faster, more intuitive way to control their instances without repetitive console access.
 
-## 디렉토리 구조
+## Table of Contents
 
-```
-ec2-instance-control/
-├── envs/
-│   ├── dev.env
-│   ├── prod.env
-│   └── .env.example      ← 템플릿만 깃에 포함
-├── scripts/
-│   ├── start_instance.sh
-│   ├── stop_instance.sh
-│   └── wait_and_shutdown.sh
-├── open.sh
-├── close.sh
-├── connect.sh
-├── install.sh            ← 새로운 설치 스크립트
-├── shutdown.log          ← nohup 로그
-├── README.md
-└── .gitignore
-```
+- [Purpose](#purpose)
+- [Features](#features)
+- [Installation](#installation)
+- [Configuration](#configuration)
+- [Usage](#usage)
+  - [`ec2ctl init`](#ec2ctl-init)
+  - [`ec2ctl list`](#ec2ctl-list)
+  - [`ec2ctl start`](#ec2ctl-start)
+  - [`ec2ctl stop`](#ec2ctl-stop)
+  - [`ec2ctl status`](#ec2ctl-status)
+- [Error Handling & Troubleshooting](#error-handling--troubleshooting)
+- [Contributing](#contributing)
+- [License](#license)
 
-## 주요 스크립트 설명
+## Purpose
 
-| 파일명 | 역할 |
-|--------|------|
-| `install.sh` | `ec2ctl` 셸 함수를 설치하여 스크립트 실행을 간소화 |
-| `open.sh` | `.env`를 로드하고 전체 자동화 흐름을 실행 (시작 → 자동 종료 예약) |
-| `close.sh` | `.env`를 로드하고 인스턴스 종료 |
-| `connect.sh` | `.env`를 로드하고 EC2 인스턴스를 시작한 후 SSH로 접속 |
-| `scripts/start_instance.sh` | EC2 인스턴스를 시작하고 시작 요청 완료 메시지를 출력 |
-| `scripts/wait_and_shutdown.sh` | 설정된 시간 후 EC2 인스턴스를 자동 종료 |
-| `scripts/stop_instance.sh` | EC2 인스턴스를 수동으로 즉시 종료 |
+`ec2ctl` simplifies the management of AWS EC2 instances. It allows you to control instances with intuitive commands based on a local configuration file, eliminating the need for repetitive console access.
 
----
+## Features
 
-## ⚙️ 필수 설정
+- **Intuitive Commands:** `ec2ctl start dev-server`, `ec2ctl stop all`, `ec2ctl status backend-group`.
+- **Flexible Configuration:** Manage instances by name or group using a simple `config.yaml` file.
+- **Enhanced User Experience:** Supports `--dry-run`, `--verbose`, and `--yes` options.
+- **Robust Error Handling:** Provides clear messages for AWS authentication, instance state, and configuration issues.
 
-### 1. AWS CLI 설치 및 설정
+## Installation
 
-> 💡 AWS CLI가 반드시 설치되어 있어야 하며, 적절한 자격 증명이 필요합니다.
+### Prerequisites
 
-#### AWS CLI 설치 (Ubuntu 기준) :
+- Python 3.7+
+- `pip` (Python package installer)
+- AWS CLI configured with your credentials (`aws configure`)
 
-```bash
-sudo apt update && sudo apt install -y awscli
-```
+### Install `ec2ctl`
 
-```bash
-aws configure
-```
+1.  **Clone the repository:**
 
-입력 항목:
+    ```bash
+    git clone https://github.com/YOUR_USERNAME/ec2-instance-control.git # Replace with your actual repo URL
+    cd ec2-instance-control
+    ```
 
-- AWS Access Key ID: IAM 사용자용 키
+2.  **Install in editable mode (for development):**
 
-- AWS Secret Access Key: 위 키의 비밀 키
+    ```bash
+    pip install -e .
+    ```
+    This allows changes to the source code to be immediately reflected without reinstallation.
 
-- Default region name: 예: ap-northeast-2 (서울 리전)
+## Configuration
 
-- Default output format: json 또는 text
-
-> ⚠️ 해당 키는 EC2 인스턴스에 대해 start, stop, describe-instances 권한을 반드시 가져야 합니다.
-권한이 부족하면 스크립트가 실패합니다.
-
-### 2. .env 파일 설정
-
-`.env` 파일에는 EC2 인스턴스 ID, SSH 키 경로, SSH 사용자 이름이 포함되어야 합니다. `envs/` 디렉토리에 `dev.env`, `prod.env` 등 환경별 파일을 생성하여 관리할 수 있습니다.
-
-```env
-INSTANCE_ID=i-xxxxxxxxxxxxxxxxx     # EC2 인스턴스 ID
-SSH_KEY_PATH="/path/to/your-key.pem"  # SSH 키 파일의 절대 경로
-SSH_USER=ubuntu                         # EC2 인스턴스 사용자 이름 (예: ubuntu, ec2-user)
-```
-
----
-
-## 🚀 빠른 시작
-
-`install.sh` 스크립트를 실행하여 `ec2ctl` 셸 함수를 설치하세요. 이 함수를 통해 EC2 제어 스크립트를 더 쉽게 실행할 수 있습니다.
+`ec2ctl` uses a YAML configuration file located at `~/.ec2ctl/config.yaml`. You can generate a default configuration file by running:
 
 ```bash
-git clone https://github.com/eehwan/ec2-instance-control
-cd ec2-instance-control
-chmod +x install.sh # 실행 권한 부여
-./install.sh        # 설치 스크립트 실행
+ec2ctl init
 ```
 
-**주의:** `install.sh` 스크립트는 `.zshrc` 또는 `.bashrc`와 같은 셸 설정 파일을 수정합니다. 스크립트 실행 전에 내용을 확인하시고, 실행 중 동의 여부를 묻는 프롬프트에 'y'를 입력해야 합니다.
+### `config.yaml` Structure
 
-### 스크립트 실행 예시 (`ec2ctl` 함수 사용)
+```yaml
+default_profile: default
+default_region: ap-northeast-2
 
-`install.sh`를 통해 `ec2ctl` 함수를 설치한 후, 터미널에서 다음 명령어를 사용하여 스크립트를 실행할 수 있습니다.
+instances:
+  dev-server: i-0abc1234567890
+  backend-api:
+    - i-01aaa111aaa
+    - i-01bbb222bbb
+  staging: i-0123staging456
+```
+
+-   `default_profile`: (Optional) Your default AWS profile name. Defaults to `default`.
+-   `default_region`: (Optional) Your default AWS region. Defaults to `ap-northeast-2`.
+-   `instances`: A map of instance names or group names to their corresponding EC2 instance IDs.
+    -   Single instance: `dev-server: i-0abc1234567890`
+    -   Instance group: `backend-api: [i-01aaa111aaa, i-01bbb222bbb]`
+
+## Usage
+
+All commands support `--profile`, `--region`, `--dry-run`, and `--verbose` options. Commands that modify state also support `--yes` (`-y`).
+
+### `ec2ctl init [--yes]`
+
+Initializes the default `config.yaml` file.
 
 ```bash
-# 기본 .env 파일을 사용하여 EC2 인스턴스 시작 및 2시간 후 자동 종료 예약
-ec2ctl open
-
-# 'dev.env' 파일을 사용하여 EC2 인스턴스 시작 및 30분(1800초) 후 자동 종료 예약
-ec2ctl open dev --wait 1800
-
-# 'dev.env' 파일을 사용하여 EC2 인스턴스 즉시 종료
-ec2ctl close dev
-
-# 'prod.env' 파일을 사용하여 EC2 인스턴스 시작 후 SSH 접속
-ec2ctl connect prod
+ec2ctl init
+# Overwrite without confirmation
+ec2ctl init --yes
 ```
 
-**`ec2ctl` 함수 사용법:**
+### `ec2ctl list`
+
+Lists all EC2 instances and groups configured in `~/.ec2ctl/config.yaml`.
 
 ```bash
-ec2ctl <스크립트_이름> [환경_이름] [스크립트_추가_인자...]
+ec2ctl list
 ```
 
-*   `<스크립트_이름>`: `open`, `close`, `connect` 중 하나.
-*   `[환경_이름]`: 사용할 `.env` 파일의 이름 (예: `dev`, `prod`). 지정하지 않으면 `envs/.env` 파일을 사용합니다.
-*   `[스크립트_추가_인자...]`: `open.sh`의 `--wait`와 같이 각 스크립트가 받는 추가 인자들.
+### `ec2ctl start [name|group]`
 
----
-
-## 🗑️ 정리 (인스턴스 종료)
-
-EC2 인스턴스를 수동으로 즉시 종료하려면 `ec2ctl close` 명령을 사용하세요.
+Starts the specified EC2 instance(s).
 
 ```bash
-ec2ctl close dev
+ec2ctl start dev-server
+ec2ctl start backend-api
 ```
+
+### `ec2ctl stop [name|group]`
+
+Stops the specified EC2 instance(s).
+
+```bash
+ec2ctl stop dev-server
+ec2ctl stop backend-api
+```
+
+### `ec2ctl status [name|group|all]`
+
+Gets the current status of the specified EC2 instance(s).
+
+```bash
+ec2ctl status dev-server
+ec2ctl status all
+```
+
+## Error Handling & Troubleshooting
+
+`ec2ctl` provides informative error messages for common issues:
+
+-   **Config file not found:** Run `ec2ctl init` to create the default configuration.
+-   **Instance/Group not found:** Ensure the name is correctly spelled and defined in `config.yaml`.
+-   **AWS Authentication/Authorization issues:** Check your AWS CLI configuration (`aws configure`) and IAM policies (e.g., `ec2:StartInstances`, `ec2:StopInstances`, `ec2:DescribeInstances`).
+-   **Incorrect Instance State:** Attempting to start an already running instance, or stop an already stopped instance.
+
+## Contributing
+
+Contributions are welcome! Please feel free to open issues or submit pull requests.
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
