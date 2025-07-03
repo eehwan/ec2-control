@@ -1,0 +1,9 @@
+default_profile: default
+default_region: ap-northeast-2
+
+instances:
+  dev-server: i-0abc1234567890
+  backend-api:
+    - i-01aaa111aaa
+    - i-01bbb222bbb
+  staging: i-0123staging456
