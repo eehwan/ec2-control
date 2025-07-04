@@ -16,7 +16,8 @@ tests/
 │   ├── test_list.py
 │   ├── test_start.py
 │   ├── test_stop.py
-│   └── test_status.py
+│   ├── test_status.py
+│   └── test_connect.py
 ├── ec2/                    # Tests for AWS EC2 interactions (ec2ctl/ec2.py)
 │   ├── __init__.py
 │   ├── conftest.py         # EC2-specific fixtures (e.g., mocked AWS credentials, EC2 client, instances)

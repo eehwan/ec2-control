@@ -83,10 +83,84 @@ def test_connect_command_no_public_ip(runner, mock_ec2_functions, prepared_confi
     mock_start.return_value = True
     mock_subprocess_run.return_value = MagicMock(returncode=0)
 
-    with patch('ec2ctl.cli._get_instance_details', return_value=("i-1234567890abcdef0", "testuser", "~/.ssh/test_key.pem")) as mock_get_instance_details:
+    with patch('ec2ctl.cli._get_instance_details', return_value=("i-1234567890abcdef0", "testuser", "~/.ssh/test_key.pem", None)) as mock_get_instance_details:
         with patch('ec2ctl.ec2.get_instance_public_ip', return_value=None) as mock_get_ip:
             result = runner.invoke(cli.cli, ['connect', 'dev-server', '--user', 'testuser', '--key', '~/.ssh/test_key.pem'])
 
         assert result.exit_code == 1
         assert f"Error: Could not get public IP for {mock_get_ids.return_value[0]}. Instance might not have a public IP." in result.output
         mock_stop.assert_not_called() # Should not stop if connection failed
+
+def test_connect_command_with_port_option(runner, mock_ec2_functions, prepared_config, mock_subprocess_run):
+    mock_get_ids, mock_start, mock_stop, mock_get_status = mock_ec2_functions
+    mock_get_ids.return_value = ["i-1234567890abcdef0"]
+    mock_get_status.return_value = "running"
+    mock_start.return_value = True
+    mock_subprocess_run.return_value = MagicMock(returncode=0)
+
+    with patch('ec2ctl.ec2.get_instance_public_ip', return_value="192.168.1.100") as mock_get_ip:
+        result = runner.invoke(cli.cli, ['connect', 'dev-server', '--user', 'testuser', '--key', '~/.ssh/custom_key.pem', '--port', '2222'])
+
+        assert result.exit_code == 0
+        mock_subprocess_run.assert_called_once_with([
+            "ssh",
+            "-i", os.path.expanduser('~/.ssh/custom_key.pem'),
+            "-p", "2222",
+            "testuser@192.168.1.100"
+        ], check=True)
+
+def test_connect_command_with_config_port(runner, mock_ec2_functions, prepared_config, mock_subprocess_run):
+    mock_get_ids, mock_start, mock_stop, mock_get_status = mock_ec2_functions
+    mock_get_ids.return_value = ["i-1234567890abcdef0"]
+    mock_get_status.return_value = "running"
+    mock_start.return_value = True
+    mock_subprocess_run.return_value = MagicMock(returncode=0)
+
+    # Manually modify the config to include ssh_port for dev-server
+    cfg = config.get_config()
+    cfg['instances']['dev-server'] = {
+        'id': 'i-1234567890abcdef0',
+        'ssh_user': 'configuser',
+        'ssh_key_path': '~/.ssh/config_key.pem',
+        'ssh_port': 2222
+    }
+    with open(config.CONFIG_PATH, 'w') as f:
+        yaml.dump(cfg, f)
+
+    with patch('ec2ctl.ec2.get_instance_public_ip', return_value="192.168.1.100") as mock_get_ip:
+        result = runner.invoke(cli.cli, ['connect', 'dev-server'])
+
+        assert result.exit_code == 0
+        mock_subprocess_run.assert_called_once_with([
+            "ssh",
+            "-i", os.path.expanduser('~/.ssh/config_key.pem'),
+            "-p", "2222",
+            "configuser@192.168.1.100"
+        ], check=True)
+
+def test_connect_command_default_port(runner, mock_ec2_functions, prepared_config, mock_subprocess_run):
+    mock_get_ids, mock_start, mock_stop, mock_get_status = mock_ec2_functions
+    mock_get_ids.return_value = ["i-1234567890abcdef0"]
+    mock_get_status.return_value = "running"
+    mock_start.return_value = True
+    mock_subprocess_run.return_value = MagicMock(returncode=0)
+
+    # Manually modify the config to include ssh_user and ssh_key_path but NO ssh_port
+    cfg = config.get_config()
+    cfg['instances']['dev-server'] = {
+        'id': 'i-1234567890abcdef0',
+        'ssh_user': 'defaultuser',
+        'ssh_key_path': '~/.ssh/default_key.pem'
+    }
+    with open(config.CONFIG_PATH, 'w') as f:
+        yaml.dump(cfg, f)
+
+    with patch('ec2ctl.ec2.get_instance_public_ip', return_value="192.168.1.100") as mock_get_ip:
+        result = runner.invoke(cli.cli, ['connect', 'dev-server'])
+
+        assert result.exit_code == 0
+        mock_subprocess_run.assert_called_once_with([
+            "ssh",
+            "-i", os.path.expanduser('~/.ssh/default_key.pem'),
+            "defaultuser@192.168.1.100"
+        ], check=True)
