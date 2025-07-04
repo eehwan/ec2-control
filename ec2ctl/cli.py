@@ -44,11 +44,13 @@ def _get_instance_details(name, cfg):
     instance_id = None
     ssh_user = None
     ssh_key_path = None
+    ssh_port = None
 
     if isinstance(item, dict):
         instance_id = item.get('id')
         ssh_user = item.get('ssh_user')
         ssh_key_path = item.get('ssh_key_path')
+        ssh_port = item.get('ssh_port')
     elif isinstance(item, str):
         instance_id = item
     elif isinstance(item, (list, tuple)):
@@ -59,7 +61,7 @@ def _get_instance_details(name, cfg):
     if not instance_id:
         raise ConfigError(f"Instance ID not found for '{name}' in config.")
 
-    return instance_id, ssh_user, ssh_key_path
+    return instance_id, ssh_user, ssh_key_path, ssh_port
 
 @cli.command()
 @click.argument('name')
@@ -225,18 +227,20 @@ def init(yes):
 @click.argument('name')
 @click.option('--user', help='SSH user name. Overrides config.')
 @click.option('--key', help='Path to SSH private key file. Overrides config.')
+@click.option('--port', help='SSH port. Overrides config.')
 @click.option('--keep-running', is_flag=True, help='Keep instance running after SSH disconnect.')
 @common_options
-def connect(name, user, key, keep_running, profile, region, dry_run, verbose):
+def connect(name, user, key, port, keep_running, profile, region, dry_run, verbose):
     """Connects to an EC2 instance via SSH, starting it if necessary."""
     try:
         resolved_profile, resolved_region = _get_aws_params(profile, region)
         cfg = config.get_config()
-        instance_id, ssh_user_cfg, ssh_key_path_cfg = _get_instance_details(name, cfg)
+        instance_id, ssh_user_cfg, ssh_key_path_cfg, ssh_port_cfg = _get_instance_details(name, cfg)
 
         # Determine SSH user and key path
         final_ssh_user = user if user else ssh_user_cfg
         final_ssh_key_path = key if key else ssh_key_path_cfg
+        final_ssh_port = port if port else ssh_port_cfg
 
         if not final_ssh_user:
             raise ConfigError("SSH user not specified in config or via --user option.")
@@ -269,8 +273,10 @@ def connect(name, user, key, keep_running, profile, region, dry_run, verbose):
         ssh_command = [
             "ssh",
             "-i", os.path.expanduser(final_ssh_key_path),
-            f"{final_ssh_user}@{public_ip}"
         ]
+        if final_ssh_port:
+            ssh_command.extend(["-p", str(final_ssh_port)])
+        ssh_command.append(f"{final_ssh_user}@{public_ip}")
 
         if verbose:
             click.echo(f"Executing SSH command: {' '.join(ssh_command)}")

@@ -2,7 +2,11 @@ default_profile: default
 default_region: ap-northeast-2
 
 instances:
-  dev-server: i-0abc1234567890
+  dev-server:
+    id: i-0abc1234567890
+    ssh_user: ec2-user
+    ssh_key_path: ~/.ssh/my-key.pem
+    ssh_port: 2222
   backend-api:
     - i-01aaa111aaa
     - i-01bbb222bbb

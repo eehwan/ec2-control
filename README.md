@@ -79,6 +79,7 @@ instances:
     id: i-0abc1234567890
     ssh_user: ec2-user
     ssh_key_path: ~/.ssh/id_rsa
+    ssh_port: 2222 # Optional SSH port
   backend-api:
     - id: i-01aaa111aaa
       ssh_user: ubuntu
@@ -92,7 +93,7 @@ instances:
 -   `default_profile`: (Optional) Your default AWS profile name. Defaults to `default`.
 -   `default_region`: (Optional) Your default AWS region. Defaults to `ap-northeast-2`.
 -   `instances`: A map of instance names or group names to their corresponding EC2 instance IDs and optional SSH details.
-    -   Single instance with SSH details: `dev-server: { id: ..., ssh_user: ..., ssh_key_path: ... }`
+    -   Single instance with SSH details: `dev-server: { id: ..., ssh_user: ..., ssh_key_path: ..., ssh_port: ... }`
     -   Instance group with SSH details: `backend-api: [ { id: ..., ssh_user: ..., ssh_key_path: ... }, ... ]`
     -   Simple ID definition is still supported: `staging: i-0123staging456`
 
@@ -145,18 +146,22 @@ ec2ctl status dev-server
 ec2ctl status all
 ```
 
-### `ec2ctl connect [name] [--user USER] [--key KEY_PATH] [--keep-running]`
+### `ec2ctl connect [name] [--user USER] [--key KEY_PATH] [--port PORT] [--keep-running]`
 
 Connects to an EC2 instance via SSH, starting it if necessary. By default, the instance will be stopped when the SSH session disconnects.
 
 -   `name`: The name of the instance or group as defined in `config.yaml`.
 -   `--user USER`: Override the SSH user defined in config.
 -   `--key KEY_PATH`: Override the path to the SSH private key file defined in config.
+-   `--port PORT`: Override the SSH port defined in config.
 -   `--keep-running`: Keep the instance running after the SSH session disconnects.
 
 ```bash
 # Connect to dev-server, stop on disconnect (default)
 ec2ctl connect dev-server
+
+# Connect to dev-server with a specific port
+ec2ctl connect dev-server --port 2222
 
 # Connect to dev-server, keep running on disconnect
 ec2ctl connect dev-server --keep-running
