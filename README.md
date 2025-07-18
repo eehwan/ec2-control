@@ -2,6 +2,8 @@
 
 ![Python Version](https://img.shields.io/badge/python-3.7+-blue.svg) ![PyPI Version](https://img.shields.io/pypi/v/ec2ctl.svg) ![License](https://img.shields.io/badge/license-MIT-green.svg)
 
+Read this in other languages: [한국어](https://github.com/eehwan/ec2-control/blob/main/README_ko.md) | [English](https://github.com/eehwan/ec2-control/blob/main/README.md)
+
 ---
 
 **Tired of logging into AWS Console just to start your EC2 instance and copy the IP again?**
