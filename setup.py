@@ -24,6 +24,7 @@ setup(
             'ec2ctl = ec2ctl.cli:cli',
         ],
     },
+    description="A CLI for developers to easily manage AWS EC2 development servers.",
     long_description=long_description,
     long_description_content_type="text/markdown",
     classifiers=[
