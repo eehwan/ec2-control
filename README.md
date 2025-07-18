@@ -2,7 +2,12 @@
 
 ![Python Version](https://img.shields.io/badge/python-3.7+-blue.svg) ![PyPI Version](https://img.shields.io/pypi/v/ec2ctl.svg) ![License](https://img.shields.io/badge/license-MIT-green.svg)
 
-A lightweight CLI tool to manage AWS EC2 instances by name or group, designed for developers and DevOps who need a faster, more intuitive way to control their instances without repetitive console access.
+---
+
+**Tired of logging into AWS Console just to start your EC2 instance and copy the IP again?**
+
+**`ec2ctl` is a lightweight CLI tool built for developers who use EC2 as a dev environment — turning it on/off frequently to save costs — and want a faster, simpler way to manage it.**  
+No more digging through the console or copying dynamic IPs manually.
 
 ## Table of Contents
 
@@ -23,7 +28,17 @@ A lightweight CLI tool to manage AWS EC2 instances by name or group, designed fo
 
 ## Purpose
 
-`ec2ctl` simplifies the management of AWS EC2 instances. It allows you to control instances with intuitive commands based on a local configuration file, eliminating the need for repetitive console access.
+Many developers use EC2 as a lightweight development server — spinning it up only when needed to reduce AWS bills.  
+But starting/stopping instances manually via the AWS Console can be a hassle, and changing public IPs makes SSH access even more tedious.
+
+`ec2ctl` eliminates that friction. It lets you:
+
+- Start/stop EC2 instances with a single, memorable command
+- Connect via SSH without worrying about changing IPs
+- Group and manage instances in a config file for fast lookup
+- Skip the AWS Console entirely for routine tasks
+
+All with a simple YAML config and clean CLI UX.
 
 ## Features
 
