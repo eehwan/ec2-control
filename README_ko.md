@@ -77,25 +77,53 @@ pip install -e .
 ## 설정 방법
 
 `ec2ctl`은 `~/.ec2ctl/config.yaml` 파일을 설정 파일로 사용합니다.
-다음 명령어로 기본 설정 파일을 생성할 수 있습니다:
+`ec2ctl init` 명령어는 이제 AWS 프로필과 리전을 선택하도록 대화형으로 안내하며, 사용자의 EC2 인스턴스를 자동으로 탐색하여 이를 기반으로 `config.yaml`을 생성합니다.
 
 ```bash
 ec2ctl init
 ```
 
-### 설정 파일 예시
+### 생성된 `config.yaml` 구조
+
+`ec2ctl init` 명령어는 사용자의 EC2 인스턴스를 탐색하여 이를 기반으로 `config.yaml`을 생성합니다. 다음과 유사하게 보일 것입니다:
 
 ```yaml
-default_profile: default
-default_region: ap-northeast-2
+default_profile: 선택된-프로필
+default_region: 선택된-리전
 
 instances:
+  web-1:
+    id: i-0123456789abcdef0
+    ssh_user: ec2-user # 자동 추정됨, 필요시 확인 및 변경
+    ssh_key_path: ~/.ssh/web-1-key.pem # 자동 추정됨, 필요시 확인 및 변경
+  web-2:
+    id: i-fedcba9876543210
+    ssh_user: ubuntu # 자동 추정됨, 필요시 확인 및 변경
+    ssh_key_path: ~/.ssh/web-2-key.pem # 자동 추정됨, 필요시 확인 및 변경
+  # ... 그 외 탐색된 인스턴스
+```
+
+-   `default_profile`: `init` 과정에서 선택된 기본 AWS 프로필 이름.
+-   `default_region`: `init` 과정에서 선택된 기본 AWS 리전.
+-   `instances`: 탐색된 EC2 인스턴스 이름(또는 Name 태그가 없는 경우 ID)과 해당 세부 정보의 맵.
+    -   `id`: EC2 인스턴스 ID.
+    -   `ssh_user`: 자동 추정된 SSH 사용자(기본값은 `ec2-user`). **인스턴스의 AMI에 따라 이를 확인하고 변경해야 합니다(예: Ubuntu AMI의 경우 `ubuntu`).**
+    -   `ssh_key_path`: 인스턴스에 연결된 키 페어 이름을 기반으로 자동 추정된 SSH 개인 키 경로. **이 경로를 확인하고 실제 개인 키 파일을 가리키는지 확인해야 합니다.** 키 이름이 발견되지 않으면 플레이스홀더가 사용됩니다.
+
+**인스턴스 또는 그룹 수동 추가:**
+
+`ec2ctl init`이 초기 설정을 생성한 후, `~/.ec2ctl/config.yaml` 파일을 수동으로 편집하여 더 많은 인스턴스를 추가하거나 그룹을 정의할 수 있습니다. 인스턴스 그룹 또는 간단한 ID 항목을 정의하는 방법에 대한 예시는 `config.example.yaml`을 참조하십시오.
+
+```yaml
+# config.example.yaml에서 수동으로 추가할 수 있는 항목 예시:
+instances:
+  # ... (기존에 탐색된 인스턴스)
+
   dev-server:
     id: i-0abc1234567890
     ssh_user: ec2-user
-    ssh_key_path: ~/.ssh/id_rsa
+    ssh_key_path: ~/.ssh/my-key.pem
     ssh_port: 2222
-
   backend-api:
     - id: i-01aaa111aaa
       ssh_user: ubuntu
@@ -103,9 +131,17 @@ instances:
     - id: i-01bbb222bbb
       ssh_user: ubuntu
       ssh_key_path: ~/.ssh/backend_key.pem
-
   staging: i-0123staging456
 ```
+
+-   `default_profile`: `init` 과정에서 선택된 기본 AWS 프로필 이름.
+-   `default_region`: `init` 과정에서 선택된 기본 AWS 리전.
+-   `instances`: 탐색된 EC2 인스턴스 이름(또는 Name 태그가 없는 경우 ID)과 해당 세부 정보의 맵. 여기에 수동으로 항목을 추가할 수도 있습니다.
+    -   `id`: EC2 인스턴스 ID.
+    -   `ssh_user`: 자동 추정된 SSH 사용자(기본값은 `ec2-user`). **인스턴스의 AMI에 따라 이를 확인하고 변경해야 합니다(예: Ubuntu AMI의 경우 `ubuntu`).**
+    -   `ssh_key_path`: 인스턴스에 연결된 키 페어 이름을 기반으로 자동 추정된 SSH 개인 키 경로. **이 경로를 확인하고 실제 개인 키 파일을 가리키는지 확인해야 합니다.** 키 이름이 발견되지 않으면 플레이스홀더가 사용됩니다.
+
+여전히 이 파일을 수동으로 편집하여 인스턴스 그룹을 추가하거나 세부 정보를 수정할 수 있습니다.
 
 ---
 
@@ -115,6 +151,8 @@ instances:
 상태를 변경하는 명령어는 `--yes` (`-y`)도 지원합니다.
 
 ### 인스턴스 설정 초기화
+
+AWS 계정에서 EC2 인스턴스를 탐색하여 설정 파일을 초기화합니다. AWS 프로필과 리전을 선택하라는 메시지가 표시됩니다.
 
 ```bash
 ec2ctl init

@@ -79,24 +79,54 @@ This allows changes to the source code to be immediately reflected without reins
 
 ## Configuration
 
-`ec2ctl` uses a YAML configuration file located at `~/.ec2ctl/config.yaml`. You can generate a default configuration file by running:
+`ec2ctl` uses a YAML configuration file located at `~/.ec2ctl/config.yaml`.
+The `ec2ctl init` command now interactively guides you through selecting an AWS profile and region, then automatically discovers your EC2 instances and generates a `config.yaml` based on them.
 
 ```bash
 ec2ctl init
 ```
 
-### `config.yaml` Structure
+### Generated `config.yaml` Structure
+
+The `ec2ctl init` command discovers your EC2 instances and generates a `config.yaml` based on them. It will look similar to this:
 
 ```yaml
-default_profile: default
-default_region: ap-northeast-2
+default_profile: your-selected-profile
+default_region: your-selected-region
 
 instances:
+  web-1:
+    id: i-0123456789abcdef0
+    ssh_user: ec2-user # Auto-guessed, verify and change if needed
+    ssh_key_path: ~/.ssh/web-1-key.pem # Auto-guessed, verify and change if needed
+  web-2:
+    id: i-fedcba9876543210
+    ssh_user: ubuntu # Auto-guessed, verify and change if needed
+    ssh_key_path: ~/.ssh/web-2-key.pem # Auto-guessed, verify and change if needed
+  # ... other discovered instances
+```
+
+-   `default_profile`: Your default AWS profile name, selected during `init`.
+-   `default_region`: Your default AWS region, selected during `init`.
+-   `instances`: A map of discovered EC2 instance names (or IDs if no Name tag) to their details.
+    -   `id`: The EC2 instance ID.
+    -   `ssh_user`: An auto-guessed SSH user (defaults to `ec2-user`). **You must verify and change this based on your instance's AMI (e.g., `ubuntu` for Ubuntu AMIs).**
+    -   `ssh_key_path`: An auto-guessed path to your SSH private key, based on the key pair name linked to the instance. **You must verify this path and ensure it points to your actual private key file.** If no key name was found, a placeholder will be used.
+
+**Manually Adding Instances or Groups:**
+
+After `ec2ctl init` generates the initial config, you can manually edit the `~/.ec2ctl/config.yaml` file to add more instances or define groups. Refer to `config.example.yaml` for examples of how to define instance groups or simple ID entries.
+
+```yaml
+# Example entries from config.example.yaml that you can add manually:
+instances:
+  # ... (existing discovered instances)
+
   dev-server:
     id: i-0abc1234567890
     ssh_user: ec2-user
-    ssh_key_path: ~/.ssh/id_rsa
-    ssh_port: 2222 # Optional SSH port
+    ssh_key_path: ~/.ssh/my-key.pem
+    ssh_port: 2222
   backend-api:
     - id: i-01aaa111aaa
       ssh_user: ubuntu
@@ -104,15 +134,8 @@ instances:
     - id: i-01bbb222bbb
       ssh_user: ubuntu
       ssh_key_path: ~/.ssh/backend_key.pem
-  staging: i-0123staging456 # Simple ID definition still supported
+  staging: i-0123staging456
 ```
-
--   `default_profile`: (Optional) Your default AWS profile name. Defaults to `default`.
--   `default_region`: (Optional) Your default AWS region. Defaults to `ap-northeast-2`.
--   `instances`: A map of instance names or group names to their corresponding EC2 instance IDs and optional SSH details.
-    -   Single instance with SSH details: `dev-server: { id: ..., ssh_user: ..., ssh_key_path: ..., ssh_port: ... }`
-    -   Instance group with SSH details: `backend-api: [ { id: ..., ssh_user: ..., ssh_key_path: ... }, ... ]`
-    -   Simple ID definition is still supported: `staging: i-0123staging456`
 
 ## Usage
 
@@ -120,7 +143,7 @@ All commands support `--profile`, `--region`, `--dry-run`, and `--verbose` optio
 
 ### `ec2ctl init [--yes]`
 
-Initializes the default `config.yaml` file.
+Initializes the config file by discovering EC2 instances from your AWS account. It will prompt you to select an AWS profile and region.
 
 ```bash
 ec2ctl init
