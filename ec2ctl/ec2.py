@@ -107,3 +107,29 @@ def get_instance_ids_from_names(names, config_data):
             raise ConfigError(f"Invalid instance definition for '{name}': {item}")
 
     return list(set(instance_ids)) # Return unique IDs
+
+def describe_instances_for_config(profile, region):
+    """
+    Describes EC2 instances to gather information for config generation.
+    Returns a list of dicts, each containing instance details.
+    """
+    ec2 = _get_ec2_client(profile, region)
+    try:
+        paginator = ec2.get_paginator('describe_instances')
+        pages = paginator.paginate(Filters=[{'Name': 'instance-state-name', 'Values': ['pending', 'running', 'stopping', 'stopped']}])
+        
+        instances = []
+        for page in pages:
+            for reservation in page['Reservations']:
+                for instance in reservation['Instances']:
+                    name_tag = next((tag['Value'] for tag in instance.get('Tags', []) if tag['Key'] == 'Name'), None)
+                    instance_name = name_tag if name_tag else instance['InstanceId']
+                    
+                    instances.append({
+                        'name': instance_name,
+                        'id': instance['InstanceId'],
+                        'key_name': instance.get('KeyName')
+                    })
+        return instances
+    except ClientError as e:
+        raise AwsError(f"Failed to describe instances in region {region}: {e}")

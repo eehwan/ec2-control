@@ -214,14 +214,19 @@ def list(profile, region, dry_run, verbose): # No 'yes' for list
 @cli.command()
 @click.option('--yes', '-y', is_flag=True, help='Skip confirmation prompts.')
 def init(yes):
-    """Initializes the config file."""
+    """Initializes the config file by discovering EC2 instances."""
     if config.os.path.exists(config.CONFIG_PATH):
         if not yes and not click.confirm(f"{config.CONFIG_PATH} already exists. Overwrite?"):
             click.echo("Aborted.")
             sys.exit(0)
-    config.create_default_config()
-    click.echo(f"Created default config file at {config.CONFIG_PATH}")
-    sys.exit(0)
+    try:
+        config.create_config_from_aws()
+    except (ConfigError, AwsError) as e:
+        click.echo(f"Error during initialization: {e}", err=True)
+        sys.exit(1)
+    except Exception as e:
+        click.echo(f"An unexpected error occurred: {e}", err=True)
+        sys.exit(1)
 
 @cli.command()
 @click.argument('name')
